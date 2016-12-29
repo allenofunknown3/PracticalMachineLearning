@@ -1,0 +1,84 @@
+---
+title: "PracticalMachineLearning"
+author: "Allen K H"
+date: "December 28, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+Wearables allow tracking of a multitude of physical movements. Using the variety of features available, we will try to model the "quality" of the movements. We use a dataset with the an additional column called Class (labeled classe in the dataset)
+According to http://groupware.les.inf.puc-rio.br/har
+
+Class A - Correct Form
+Class B - throwing the elbows to the front 
+Class C - lifting the dumbbell only halfway
+Class D - lowering the dumbbell only halfway
+Class E - throwing the hips to the front
+
+Using the Class column, we can build a model to measure the quality of movements recorded in wearables.
+##Data
+
+```{r}
+library(data.table)
+library(caret)
+
+
+##Read In Data
+train<-fread("pml-training.csv",header=TRUE, drop = 1,colClasses=list(numeric=7:158),na.string=c("NA",""))
+train$classe<-factor(train$classe)
+```
+
+Looking at the summary, there seems to be frequent NAs over several columns.
+
+```{r}
+freqNA<-data.frame(colnames(train),colSums(!is.na(train))/nrow(train))
+colnames(freqNA)<-c("colnames","freq")
+rownames(freqNA) <- NULL
+head(freqNA)
+```
+
+It is suspicious that it is either 0.02069106 or 1.000 of values that are not NAs. The columns with very large NAs will be omitted from the model, as these will cause a lot of noise.
+## Building the Model
+
+Given that we are modeling the Class factor, Random Forest will be used. The model will be appropriate given that we are modeling for a classifier with more than 2 levels. Furthermore, all features will be used except:
+1. Those columns with large volumes of NA
+2. Columns that have are not non-numeric, such as user_name since we do not want the model to be user specific, rather generalized for the population.
+
+```{r}
+##Numeric Column-types Only and Columns with Minimal NAs
+colData<-train[,(colSums(!is.na(train))/nrow(train) > 0.5),with=FALSE]
+cols = sapply(colData, is.numeric)
+cols = names(cols)[cols]
+
+##Random Forest
+f <- as.formula(paste(names(train)[159], "~", paste(cols, collapse=" + "))) ##ONLY INCLUDE NUMERIC
+set.seed(123)
+modelRF<-train(f,data=train,method='rf',importance=TRUE,ntree=40)
+```
+##Model Summary
+Our Training Model results show that the OOB estimate is 0.09% and the Confusion matrix show accurate results.
+
+```{r}
+print(modelRF$finalModel)
+```
+##Variable Importance
+We can plot the variable importance to visually rank the feature importance.
+
+```{r, echo=FALSE}
+varImpPlot(modelRF$finalModel)
+```
+##Predict Test Set
+We import the test dataset and run the model through to get predicted Class values.
+```{r}
+test<-fread("pml-testing.csv",header=TRUE,drop = 1,colClasses=list(numeric=7:158),na.string=c("NA",""))
+
+predictRF<-predict(modelRF,test)
+print(predictRF)
+```
+
+
