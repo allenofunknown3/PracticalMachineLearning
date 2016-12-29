@@ -21,6 +21,7 @@ Class D - lowering the dumbbell only halfway
 Class E - throwing the hips to the front
 
 Using the Class column, we can build a model to measure the quality of movements recorded in wearables.
+
 ##Data
 
 ```{r}
@@ -43,6 +44,7 @@ head(freqNA)
 ```
 
 It is suspicious that it is either 0.02069106 or 1.000 of values that are not NAs. The columns with very large NAs will be omitted from the model, as these will cause a lot of noise.
+
 ## Building the Model
 
 Given that we are modeling the Class factor, Random Forest will be used. The model will be appropriate given that we are modeling for a classifier with more than 2 levels. Furthermore, all features will be used except:
@@ -60,19 +62,24 @@ f <- as.formula(paste(names(train)[159], "~", paste(cols, collapse=" + "))) ##ON
 set.seed(123)
 modelRF<-train(f,data=train,method='rf',importance=TRUE,ntree=40)
 ```
+
 ##Model Summary
 Our Training Model results show that the OOB estimate is 0.09% and the Confusion matrix show accurate results.
 
 ```{r}
 print(modelRF$finalModel)
 ```
+
 ##Variable Importance
+
 We can plot the variable importance to visually rank the feature importance.
 
 ```{r, echo=FALSE}
 varImpPlot(modelRF$finalModel)
 ```
+
 ##Predict Test Set
+
 We import the test dataset and run the model through to get predicted Class values.
 ```{r}
 test<-fread("pml-testing.csv",header=TRUE,drop = 1,colClasses=list(numeric=7:158),na.string=c("NA",""))
